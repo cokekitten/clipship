@@ -150,6 +150,10 @@ mod tests {
         cfg.mode = UploadMode::Local;
         // host/username/etc. are all empty — should not fail in local mode
         assert!(cfg.validate().is_ok());
+        // Verify the same config fails in SSH mode (confirms the guard is doing real work)
+        let mut ssh_cfg = cfg.clone();
+        ssh_cfg.mode = UploadMode::Ssh;
+        assert!(ssh_cfg.validate().is_err());
     }
 
     #[test]
