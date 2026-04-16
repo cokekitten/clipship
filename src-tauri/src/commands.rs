@@ -5,6 +5,7 @@ use crate::notify::Message;
 use crate::test_connection;
 use crate::tray;
 use tauri::{AppHandle, Runtime, State};
+use tauri_plugin_autostart::ManagerExt;
 
 #[derive(Debug, serde::Serialize)]
 pub struct SaveConfigResponse {
@@ -114,4 +115,18 @@ pub async fn copy_last_uploaded(
         state.upload.clipboard.write_text(p).map_err(|e| e)?;
     }
     Ok(path)
+}
+
+#[tauri::command]
+pub async fn get_autostart<R: Runtime>(app: AppHandle<R>) -> Result<bool, String> {
+    app.autolaunch().is_enabled().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn set_autostart<R: Runtime>(app: AppHandle<R>, enabled: bool) -> Result<(), String> {
+    if enabled {
+        app.autolaunch().enable().map_err(|e| e.to_string())
+    } else {
+        app.autolaunch().disable().map_err(|e| e.to_string())
+    }
 }

@@ -6,3 +6,5 @@ export const saveConfig = (cfg: Config) => invoke<SaveConfigResponse>("save_conf
 export const testConnection = (cfg: Config) => invoke<void>("test_connection", { cfg });
 export const triggerUploadNow = () => invoke<string>("trigger_upload_now");
 export const copyLastUploaded = () => invoke<string | null>("copy_last_uploaded");
+export const getAutostart = () => invoke<boolean>("get_autostart");
+export const setAutostart = (enabled: boolean) => invoke<void>("set_autostart", { enabled });

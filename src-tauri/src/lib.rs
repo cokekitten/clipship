@@ -17,6 +17,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .setup(|app| {
             // macOS: run as a menu-bar accessory (no Dock icon).
             #[cfg(target_os = "macos")]
@@ -52,6 +53,8 @@ pub fn run() {
             commands::test_connection,
             commands::trigger_upload_now,
             commands::copy_last_uploaded,
+            commands::get_autostart,
+            commands::set_autostart,
         ])
         .run(tauri::generate_context!())
         .expect("error running Clipship");
