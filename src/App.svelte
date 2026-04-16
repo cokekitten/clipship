@@ -81,17 +81,22 @@
     <h1 class="text-xl font-semibold">Clipship</h1>
     <Button onclick={onSave}>Save</Button>
   </div>
-  <div class="flex gap-1 rounded-md border p-1 w-fit">
+  <div class="flex gap-1 rounded-md border p-1 w-fit" role="group" aria-label="Upload mode">
     <Button
       variant={cfg.mode === "ssh" ? "default" : "ghost"}
+      aria-pressed={cfg.mode === "ssh"}
       onclick={() => cfg.mode = "ssh"}
       size="sm">SSH</Button>
     <Button
       variant={cfg.mode === "local" ? "default" : "ghost"}
+      aria-pressed={cfg.mode === "local"}
       onclick={() => cfg.mode = "local"}
       size="sm">Local</Button>
   </div>
-  <div class={cfg.mode === "local" ? "pointer-events-none opacity-50" : ""}>
+  <div
+    class={`flex flex-col gap-4 ${cfg.mode === "local" ? "pointer-events-none opacity-50" : ""}`}
+    inert={cfg.mode === "local" || undefined}
+  >
     <SshSection bind:cfg />
     <DestinationSection bind:cfg />
   </div>
