@@ -15,7 +15,6 @@ pub struct TrayItems<R: Runtime> {
 pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let upload_now = MenuItem::with_id(app, "upload_now", "Upload clipboard now", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Open settings", true, None::<&str>)?;
-    let test_conn = MenuItem::with_id(app, "test", "Test connection", true, None::<&str>)?;
     let copy_last = MenuItem::with_id(app, "copy_last", "Copy last uploaded path", false, None::<&str>)?;
     let status = MenuItem::with_id(app, "status", "Idle", false, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -25,7 +24,6 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         &[
             &upload_now,
             &settings,
-            &test_conn,
             &PredefinedMenuItem::separator(app)?,
             &copy_last,
             &status,
@@ -55,7 +53,6 @@ fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
                 let _ = w.set_focus();
             }
         }
-        "test" => spawn_test(app.clone()),
         "copy_last" => {
             let state = app.state::<AppState>();
             let last = state.upload.last_uploaded.lock().unwrap().clone();
@@ -86,23 +83,6 @@ fn spawn_upload<R: Runtime>(app: AppHandle<R>) {
         set_status(&app, "Idle");
         if state.upload.last_uploaded.lock().unwrap().is_some() {
             set_last_uploaded_enabled(&app, true);
-        }
-    });
-}
-
-fn spawn_test<R: Runtime>(app: AppHandle<R>) {
-    tauri::async_runtime::spawn(async move {
-        let state = app.state::<AppState>();
-        if ensure_ssh_scp(&state).await.is_err() {
-            return;
-        }
-        match crate::config::load(&state.config_path) {
-            Ok(cfg) => {
-                if let Err(e) = crate::test_connection::run(state.upload.runner.clone(), &cfg).await {
-                    state.upload.notifier.notify(Message::MkdirFailed(e.to_string()));
-                }
-            }
-            Err(e) => state.upload.notifier.notify(Message::ConfigInvalid(e.to_string())),
         }
     });
 }
