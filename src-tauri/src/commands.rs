@@ -83,8 +83,6 @@ pub async fn trigger_upload_now<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    ensure_ssh_scp(&state).await?;
-
     let cfg = match config::load(&state.config_path) {
         Ok(c) => c,
         Err(e) => {
@@ -92,6 +90,10 @@ pub async fn trigger_upload_now<R: Runtime>(
             return Err(e.to_string());
         }
     };
+
+    if cfg.mode == crate::config::UploadMode::Ssh {
+        ensure_ssh_scp(&state).await?;
+    }
 
     tray::set_status(&app, "Uploading\u{2026}");
     let result = state.upload.upload(&cfg).await;

@@ -71,9 +71,6 @@ fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
 fn spawn_upload<R: Runtime>(app: AppHandle<R>) {
     tauri::async_runtime::spawn(async move {
         let state = app.state::<AppState>();
-        if ensure_ssh_scp(&state).await.is_err() {
-            return;
-        }
         let cfg = match crate::config::load(&state.config_path) {
             Ok(c) => c,
             Err(e) => {
@@ -81,6 +78,9 @@ fn spawn_upload<R: Runtime>(app: AppHandle<R>) {
                 return;
             }
         };
+        if cfg.mode == crate::config::UploadMode::Ssh && ensure_ssh_scp(&state).await.is_err() {
+            return;
+        }
         set_status(&app, "Uploading\u{2026}");
         let _ = state.upload.upload(&cfg).await;
         set_status(&app, "Idle");
