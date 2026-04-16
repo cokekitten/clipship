@@ -108,7 +108,7 @@ impl UploadService {
         let rm_argv = commands::rm_part(
             cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, &remote_part,
         );
-        let _ = self.runner.run(rm_argv).await?;
+        let _ = self.runner.run(rm_argv).await?; // rm -f must not fail the upload
 
         let local_path_text = local_path.to_str().ok_or_else(|| {
             UploadError::LocalPathInvalid(local_path.to_string_lossy().to_string())
@@ -539,6 +539,7 @@ mod local_upload_tests {
 
         let result = svc.upload(&local_cfg()).await.unwrap();
 
+        assert!(result.clipboard_updated);
         assert!(result.remote_path.ends_with(".png"));
         let on_disk = std::fs::read(std::path::Path::new(&result.remote_path)).unwrap();
         assert_eq!(on_disk, bytes);
