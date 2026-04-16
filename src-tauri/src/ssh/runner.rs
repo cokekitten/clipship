@@ -24,7 +24,18 @@ impl CommandRunner for TokioRunner {
         let program = it.next().ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::InvalidInput, "empty argv")
         })?;
-        let out = Command::new(program).args(it).output().await?;
+
+        #[allow(unused_mut)]
+        let mut cmd = Command::new(program);
+        cmd.args(it);
+
+        #[cfg(windows)]
+        {
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        let out = cmd.output().await?;
         Ok(CmdOutcome {
             success: out.status.success(),
             stdout: String::from_utf8_lossy(&out.stdout).to_string(),
