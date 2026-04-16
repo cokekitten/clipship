@@ -77,10 +77,28 @@
 </script>
 
 <main class="mx-auto flex max-w-2xl flex-col gap-4 p-6">
-  <h1 class="text-xl font-semibold">Clipship</h1>
-  <SshSection bind:cfg />
-  <DestinationSection bind:cfg />
+  <div class="flex items-center justify-between">
+    <h1 class="text-xl font-semibold">Clipship</h1>
+    <Button onclick={onSave}>Save</Button>
+  </div>
+  <div class="flex gap-1 rounded-md border p-1 w-fit">
+    <Button
+      variant={cfg.mode === "ssh" ? "default" : "ghost"}
+      onclick={() => cfg.mode = "ssh"}
+      size="sm">SSH</Button>
+    <Button
+      variant={cfg.mode === "local" ? "default" : "ghost"}
+      onclick={() => cfg.mode = "local"}
+      size="sm">Local</Button>
+  </div>
+  <div class={cfg.mode === "local" ? "pointer-events-none opacity-50" : ""}>
+    <SshSection bind:cfg />
+    <DestinationSection bind:cfg />
+  </div>
   <ShortcutSection bind:cfg />
+  {#if cfg.mode === "ssh"}
+    <Button variant="secondary" onclick={onTest}>Test connection</Button>
+  {/if}
   <Card.Root>
     <Card.Header>
       <Card.Title>System</Card.Title>
@@ -94,10 +112,15 @@
       </Label>
       <Switch id="autostart" checked={autostart} onCheckedChange={onAutostartChange} />
     </Card.Content>
+    <Card.Content class="flex items-center justify-between">
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium">Auto-cleanup</span>
+        <span class="text-xs text-muted-foreground">
+          Delete files older than 7 days every hour. Remote cleanup requires SSH config to be complete.
+        </span>
+      </div>
+      <Switch checked={cfg.auto_cleanup} onCheckedChange={(v) => cfg.auto_cleanup = v} />
+    </Card.Content>
   </Card.Root>
-  <div class="flex gap-2">
-    <Button onclick={onSave}>Save</Button>
-    <Button variant="secondary" onclick={onTest}>Test connection</Button>
-  </div>
   <StatusArea {status} />
 </main>
