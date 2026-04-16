@@ -1,5 +1,8 @@
-use regex::Regex;
+use std::net::IpAddr;
 use std::path::Path;
+use std::str::FromStr;
+
+use tauri_plugin_global_shortcut::Shortcut;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum FieldError {
@@ -25,6 +28,8 @@ pub enum FieldError {
     KeyMissing,
     #[error("shortcut is empty")]
     ShortcutEmpty,
+    #[error("shortcut has invalid syntax")]
+    ShortcutInvalid,
 }
 
 /// Non-fatal warnings the UI surfaces alongside a successful validate().
@@ -41,12 +46,19 @@ pub fn host(s: &str) -> Result<(), FieldError> {
     if s.starts_with('-') {
         return Err(FieldError::HostInvalid);
     }
-    // Allow hostnames, IPv4, IPv6 literals (`:` and `.`), underscore for DNS non-strict.
-    let re = Regex::new(r"^[A-Za-z0-9_.:\-]+$").unwrap();
-    if !re.is_match(s) {
-        return Err(FieldError::HostInvalid);
+    if s.contains(':') {
+        match IpAddr::from_str(s) {
+            Ok(IpAddr::V6(_)) => Ok(()),
+            _ => Err(FieldError::HostInvalid),
+        }
+    } else if s
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+    {
+        Ok(())
+    } else {
+        Err(FieldError::HostInvalid)
     }
-    Ok(())
 }
 
 pub fn username(s: &str) -> Result<(), FieldError> {
@@ -56,8 +68,10 @@ pub fn username(s: &str) -> Result<(), FieldError> {
     if s.starts_with('-') {
         return Err(FieldError::UsernameInvalid);
     }
-    let re = Regex::new(r"^[A-Za-z0-9_.\-]+$").unwrap();
-    if !re.is_match(s) {
+    if !s
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+    {
         return Err(FieldError::UsernameInvalid);
     }
     Ok(())
@@ -82,8 +96,10 @@ pub fn remote_dir(s: &str) -> Result<(), FieldError> {
             return Err(FieldError::RemoteDirTraversal);
         }
     }
-    let re = Regex::new(r"^[A-Za-z0-9_./\-]+$").unwrap();
-    if !re.is_match(s) {
+    if !s
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '/' | '-'))
+    {
         return Err(FieldError::RemoteDirUnsafe);
     }
     Ok(())
@@ -126,6 +142,9 @@ pub fn shortcut(s: &str) -> Result<(), FieldError> {
     if s.trim().is_empty() {
         return Err(FieldError::ShortcutEmpty);
     }
+    if Shortcut::from_str(s).is_err() {
+        return Err(FieldError::ShortcutInvalid);
+    }
     Ok(())
 }
 
@@ -148,6 +167,13 @@ mod tests {
         assert!(host("example com").is_err());
         assert!(host("[::1]").is_err());
         assert!(host("").is_err());
+    }
+
+    #[test]
+    fn host_rejects_malformed_colon_strings() {
+        assert!(host("example:foo").is_err());
+        assert!(host("host:22").is_err());
+        assert!(host("not::quite::right").is_err());
     }
 
     #[test]
@@ -179,6 +205,14 @@ mod tests {
         assert!(remote_dir("/home/$(id)").is_err()); // dollar
         assert!(remote_dir("/home/上传").is_err()); // non-ASCII
         assert!(remote_dir("/home/\nuser").is_err()); // newline
+    }
+
+    #[test]
+    fn shortcut_rules() {
+        assert!(shortcut("CmdOrCtrl+Shift+U").is_ok());
+        assert!(matches!(shortcut("not a shortcut"), Err(FieldError::ShortcutInvalid)));
+        assert!(matches!(shortcut("CmdOrCtrl++"), Err(FieldError::ShortcutInvalid)));
+        assert!(shortcut("   ").is_err());
     }
 
     #[test]
