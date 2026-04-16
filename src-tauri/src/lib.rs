@@ -2,6 +2,9 @@ pub mod naming;
 pub mod config;
 pub mod ssh;
 pub mod clipboard;
+pub mod notify;
+pub mod upload;
+pub mod test_connection;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
