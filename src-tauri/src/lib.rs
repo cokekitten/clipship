@@ -1,6 +1,7 @@
 pub mod naming;
 pub mod config;
 pub mod ssh;
+pub mod clipboard;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
