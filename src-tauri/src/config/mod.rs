@@ -43,8 +43,13 @@ pub enum ConfigError {
 pub fn load(path: &Path) -> Result<Config, ConfigError> {
     let raw = std::fs::read_to_string(path)?;
     let v: serde_json::Value = serde_json::from_str(&raw)?;
-    match v.get("version").and_then(|x| x.as_u64()) {
-        Some(n) if n as u32 == CURRENT_VERSION => Ok(serde_json::from_value(v)?),
+    match v.get("version") {
+        Some(version)
+            if version.as_u64() == Some(CURRENT_VERSION as u64)
+                && version.as_i64() == Some(CURRENT_VERSION as i64) =>
+        {
+            Ok(serde_json::from_value(v)?)
+        }
         _ => Err(ConfigError::UnversionedOrUnsupported),
     }
 }
@@ -94,5 +99,26 @@ mod tests {
         std::fs::write(&path, r#"{"version":2}"#).unwrap();
         let err = load(&path).unwrap_err();
         assert!(matches!(err, ConfigError::UnversionedOrUnsupported));
+    }
+
+    #[test]
+    fn load_rejects_large_version() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("c.json");
+        std::fs::write(&path, r#"{"version":4294967297}"#).unwrap();
+        let err = load(&path).unwrap_err();
+        assert!(matches!(err, ConfigError::UnversionedOrUnsupported));
+    }
+
+    #[test]
+    fn save_creates_nested_parent_directories() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("nested").join("config").join("c.json");
+        let cfg = Config::default();
+
+        save(&path, &cfg).unwrap();
+
+        assert!(path.exists());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), serde_json::to_string_pretty(&cfg).unwrap());
     }
 }
