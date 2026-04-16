@@ -34,7 +34,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             version: CURRENT_VERSION,
-            mode: UploadMode::Ssh,
+            mode: UploadMode::Local,
             host: String::new(),
             port: 22,
             username: String::new(),
@@ -98,7 +98,6 @@ impl Config {
             validate::port(self.port as u32).map_err(|e| ValidationError { field: "port", err: e })?;
             validate::username(&self.username).map_err(|e| ValidationError { field: "username", err: e })?;
             validate::private_key_path(&self.private_key_path).map_err(|e| ValidationError { field: "private_key_path", err: e })?;
-            validate::remote_dir(&self.remote_dir).map_err(|e| ValidationError { field: "remote_dir", err: e })?;
         }
         validate::shortcut(&self.shortcut).map_err(|e| ValidationError { field: "shortcut", err: e })?;
         Ok(())
@@ -123,7 +122,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn mode_defaults_to_ssh_when_field_absent() {
+    fn mode_defaults_to_local_when_field_absent() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("c.json");
         std::fs::write(
@@ -131,7 +130,7 @@ mod tests {
             r#"{"version":1,"host":"h","port":22,"username":"u","private_key_path":"","remote_dir":"/r","shortcut":"CmdOrCtrl+Shift+U"}"#,
         ).unwrap();
         let cfg = load(&path).unwrap();
-        assert_eq!(cfg.mode, UploadMode::Ssh);
+        assert_eq!(cfg.mode, UploadMode::Local);
     }
 
     #[test]
@@ -160,7 +159,8 @@ mod tests {
 
     #[test]
     fn ssh_mode_validate_still_requires_host() {
-        let cfg = Config::default(); // mode == Ssh, host == ""
+        let mut cfg = Config::default();
+        cfg.mode = UploadMode::Ssh; // explicitly set SSH so host is validated
         let err = cfg.validate().unwrap_err();
         assert_eq!(err.field, "host");
     }
@@ -260,10 +260,17 @@ mod validate_aggregate_tests {
     use super::*;
 
     #[test]
-    fn default_config_fails_validation_on_empty_fields() {
-        let cfg = Config::default();
+    fn ssh_mode_config_fails_validation_when_host_empty() {
+        let mut cfg = Config::default();
+        cfg.mode = UploadMode::Ssh;
         let err = cfg.validate().unwrap_err();
         assert_eq!(err.field, "host");
+    }
+
+    #[test]
+    fn local_mode_default_config_passes_validation() {
+        let cfg = Config::default(); // mode = Local, shortcut pre-filled
+        assert!(cfg.validate().is_ok());
     }
 
     #[cfg(unix)]

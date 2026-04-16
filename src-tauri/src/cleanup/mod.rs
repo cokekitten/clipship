@@ -7,7 +7,6 @@ pub fn is_ssh_complete(cfg: &Config) -> bool {
     !cfg.host.is_empty()
         && !cfg.username.is_empty()
         && !cfg.private_key_path.is_empty()
-        && !cfg.remote_dir.is_empty()
 }
 
 /// Delete files in `dir` older than `max_age`. Silently skips unreadable entries.
@@ -61,7 +60,7 @@ pub async fn cleanup_remote(cfg: &Config, runner: &dyn CommandRunner) {
         &cfg.private_key_path,
         &cfg.username,
         &cfg.host,
-        &cfg.remote_dir,
+        "/tmp/clipship",
     );
     match runner.run(argv).await {
         Ok(out) if !out.success => {
@@ -89,7 +88,7 @@ mod tests {
     fn is_ssh_complete_false_when_only_host_set() {
         let mut cfg = Config::default();
         cfg.host = "h".into();
-        // username, private_key_path, remote_dir still empty
+        // username and private_key_path still empty
         assert!(!is_ssh_complete(&cfg));
     }
 
@@ -99,7 +98,6 @@ mod tests {
         cfg.host = "h".into();
         cfg.username = "u".into();
         cfg.private_key_path = "/k".into();
-        cfg.remote_dir = "/r".into();
         assert!(is_ssh_complete(&cfg));
     }
 

@@ -87,7 +87,7 @@ impl UploadService {
             };
 
         let remote_name = filename::build_remote_filename(&original_name);
-        let remote_final = remote_path::join(&cfg.remote_dir, &remote_name);
+        let remote_final = remote_path::join("/tmp/clipship", &remote_name);
         let remote_part = remote_path::part_path(&remote_final);
 
         let snap = Snapshot::of(&content);
@@ -98,7 +98,7 @@ impl UploadService {
         }
 
         let mkdir_argv = commands::mkdir(
-            cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, &cfg.remote_dir,
+            cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, "/tmp/clipship",
         );
         let out = self.runner.run(mkdir_argv).await?;
         if !out.success {

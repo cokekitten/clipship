@@ -3,7 +3,6 @@
   import type { Config, Status } from "./lib/types";
   import { loadConfig, saveConfig, testConnection, getAutostart, setAutostart, defaultPrivateKey } from "./lib/bridge";
   import SshSection from "./components/SshSection.svelte";
-  import DestinationSection from "./components/DestinationSection.svelte";
   import ShortcutSection from "./components/ShortcutSection.svelte";
   import StatusArea from "./components/StatusArea.svelte";
   import * as Card from "$lib/components/ui/card";
@@ -98,7 +97,6 @@
     inert={cfg.mode === "local" || undefined}
   >
     <SshSection bind:cfg />
-    <DestinationSection bind:cfg />
   </div>
   {#if cfg.mode === "ssh"}
     <Button variant="secondary" onclick={onTest}>Test connection</Button>
