@@ -52,7 +52,7 @@ pub fn run() {
                     if !cfg.auto_cleanup {
                         continue;
                     }
-                    let local_dir = std::env::temp_dir().join("clipship");
+                    let local_dir = state.upload.local_output_dir.clone();
                     cleanup::cleanup_local(&local_dir, Duration::from_secs(7 * 24 * 3600));
                     let runner = state.upload.runner.clone();
                     cleanup::cleanup_remote(&cfg, runner.as_ref()).await;

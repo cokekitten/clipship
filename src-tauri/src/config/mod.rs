@@ -108,8 +108,10 @@ impl Config {
     /// private-key-permissions warning on Unix hosts per spec's macOS note.
     pub fn warnings(&self) -> Vec<validate::FieldWarning> {
         let mut out = vec![];
-        if let Some(w) = validate::private_key_permissions(&self.private_key_path) {
-            out.push(w);
+        if self.mode == UploadMode::Ssh {
+            if let Some(w) = validate::private_key_permissions(&self.private_key_path) {
+                out.push(w);
+            }
         }
         out
     }
