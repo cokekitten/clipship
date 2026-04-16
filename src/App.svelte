@@ -1,11 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { Config, Status } from "./lib/types";
-  import { loadConfig, saveConfig, testConnection, getAutostart, setAutostart } from "./lib/bridge";
+  import { loadConfig, saveConfig, testConnection, getAutostart, setAutostart, defaultPrivateKey } from "./lib/bridge";
   import SshSection from "./components/SshSection.svelte";
   import DestinationSection from "./components/DestinationSection.svelte";
   import ShortcutSection from "./components/ShortcutSection.svelte";
   import StatusArea from "./components/StatusArea.svelte";
+  import * as Card from "$lib/components/ui/card";
+  import { Switch } from "$lib/components/ui/switch";
+  import { Label } from "$lib/components/ui/label";
+  import { Button } from "$lib/components/ui/button";
 
   let cfg: Config = $state({
     version: 1,
@@ -15,6 +19,7 @@
     private_key_path: "",
     remote_dir: "",
     shortcut: "CmdOrCtrl+Shift+U",
+    shortcut_double_tap: false,
   });
 
   let status: Status = $state({ kind: "idle", message: "" });
@@ -25,6 +30,12 @@
       cfg = await loadConfig();
     } catch (e) {
       status = { kind: "error", message: "Failed to load configuration", detail: String(e) };
+    }
+    if (!cfg.private_key_path) {
+      try {
+        const k = await defaultPrivateKey();
+        if (k) cfg.private_key_path = k;
+      } catch (_) {}
     }
     try {
       autostart = await getAutostart();
@@ -52,41 +63,39 @@
     }
   }
 
-  async function onAutostartChange() {
+  async function onAutostartChange(v: boolean) {
+    autostart = v;
     try {
       await setAutostart(autostart);
     } catch (e) {
       status = { kind: "error", message: "Failed to update autostart", detail: String(e) };
-      autostart = !autostart; // revert
+      autostart = !autostart;
     }
   }
 </script>
 
-<main>
-  <h1>Clipship</h1>
+<main class="mx-auto flex max-w-2xl flex-col gap-4 p-6">
+  <h1 class="text-xl font-semibold">Clipship</h1>
   <SshSection bind:cfg />
   <DestinationSection bind:cfg />
   <ShortcutSection bind:cfg />
-  <fieldset>
-    <legend>System</legend>
-    <label class="toggle-label">
-      <input type="checkbox" bind:checked={autostart} onchange={onAutostartChange} />
-      Launch at login
-    </label>
-  </fieldset>
-  <div class="actions">
-    <button onclick={onSave}>Save</button>
-    <button onclick={onTest}>Test connection</button>
+  <Card.Root>
+    <Card.Header>
+      <Card.Title>System</Card.Title>
+    </Card.Header>
+    <Card.Content class="flex items-center justify-between">
+      <Label for="autostart" class="flex flex-col gap-1">
+        <span>Launch at login</span>
+        <span class="text-xs font-normal text-muted-foreground">
+          Start Clipship automatically when you sign in.
+        </span>
+      </Label>
+      <Switch id="autostart" checked={autostart} onCheckedChange={onAutostartChange} />
+    </Card.Content>
+  </Card.Root>
+  <div class="flex gap-2">
+    <Button onclick={onSave}>Save</Button>
+    <Button variant="secondary" onclick={onTest}>Test connection</Button>
   </div>
   <StatusArea {status} />
 </main>
-
-<style>
-  main { padding: 1rem; font-family: system-ui; }
-  fieldset { margin-bottom: 1rem; }
-  label { display: block; margin: 0.25rem 0; }
-  .toggle-label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
-  .hint { font-size: 0.85rem; color: #666; }
-  .status.error pre { background: #fee; padding: 0.5rem; white-space: pre-wrap; }
-  .status.ok { color: #060; }
-</style>

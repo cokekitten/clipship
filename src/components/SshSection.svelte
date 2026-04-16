@@ -1,6 +1,11 @@
 <script lang="ts">
   import type { Config } from "../lib/types";
   import { open } from "@tauri-apps/plugin-dialog";
+  import * as Card from "$lib/components/ui/card";
+  import { Input } from "$lib/components/ui/input";
+  import { Label } from "$lib/components/ui/label";
+  import { Button } from "$lib/components/ui/button";
+
   let { cfg = $bindable() }: { cfg: Config } = $props();
 
   async function pickKey() {
@@ -13,13 +18,31 @@
   }
 </script>
 
-<fieldset>
-  <legend>SSH</legend>
-  <label>Host <input bind:value={cfg.host} placeholder="example.com or ::1" /></label>
-  <label>Port <input type="number" bind:value={cfg.port} min="1" max="65535" /></label>
-  <label>Username <input bind:value={cfg.username} /></label>
-  <label>Private key
-    <input bind:value={cfg.private_key_path} readonly />
-    <button type="button" onclick={pickKey}>Browse…</button>
-  </label>
-</fieldset>
+<Card.Root>
+  <Card.Header>
+    <Card.Title>SSH</Card.Title>
+  </Card.Header>
+  <Card.Content class="grid gap-4">
+    <div class="grid gap-1.5">
+      <Label for="ssh-host">Host</Label>
+      <Input id="ssh-host" bind:value={cfg.host} placeholder="example.com or ::1" />
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div class="grid gap-1.5">
+        <Label for="ssh-port">Port</Label>
+        <Input id="ssh-port" type="number" bind:value={cfg.port} min="1" max="65535" />
+      </div>
+      <div class="grid gap-1.5">
+        <Label for="ssh-user">Username</Label>
+        <Input id="ssh-user" bind:value={cfg.username} />
+      </div>
+    </div>
+    <div class="grid gap-1.5">
+      <Label for="ssh-key">Private key</Label>
+      <div class="flex gap-2">
+        <Input id="ssh-key" class="flex-1" bind:value={cfg.private_key_path} readonly />
+        <Button variant="secondary" type="button" onclick={pickKey}>Browse…</Button>
+      </div>
+    </div>
+  </Card.Content>
+</Card.Root>
