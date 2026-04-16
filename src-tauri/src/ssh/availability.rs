@@ -19,9 +19,22 @@ pub struct Availability {
 /// the process — the actual exit status does not matter because scp has no -V flag and
 /// will return non-zero when invoked without arguments, which is still proof of existence.
 pub async fn check() -> Availability {
+    #[allow(unused_mut)]
+    let mut ssh_cmd = Command::new(SSH_BIN);
+    ssh_cmd.arg("-V");
+    #[allow(unused_mut)]
+    let mut scp_cmd = Command::new(SCP_BIN);
+
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        ssh_cmd.creation_flags(CREATE_NO_WINDOW);
+        scp_cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
     Availability {
-        ssh: Command::new(SSH_BIN).arg("-V").output().await.is_ok(),
-        scp: Command::new(SCP_BIN).output().await.is_ok(),
+        ssh: ssh_cmd.output().await.is_ok(),
+        scp: scp_cmd.output().await.is_ok(),
     }
 }
 
