@@ -86,6 +86,14 @@ mod tests {
     }
 
     #[test]
+    fn is_ssh_complete_false_when_only_host_set() {
+        let mut cfg = Config::default();
+        cfg.host = "h".into();
+        // username, private_key_path, remote_dir still empty
+        assert!(!is_ssh_complete(&cfg));
+    }
+
+    #[test]
     fn is_ssh_complete_true_when_all_fields_set() {
         let mut cfg = Config::default();
         cfg.host = "h".into();
@@ -107,9 +115,10 @@ mod tests {
         let dir = tempdir().unwrap();
         let file = dir.path().join("old.txt");
         std::fs::write(&file, b"x").unwrap();
-        // Use 0 duration so the file (written just now) counts as "old"
-        std::thread::sleep(std::time::Duration::from_millis(1));
-        cleanup_local(dir.path(), Duration::from_millis(0));
+        // Sleep longer than max_age so the file's mtime is definitely older.
+        // Using 10ms sleep + 1ms max_age avoids sub-millisecond FS timestamp races.
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        cleanup_local(dir.path(), Duration::from_millis(1));
         assert!(!file.exists(), "file should have been deleted");
     }
 

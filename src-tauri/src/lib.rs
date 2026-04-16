@@ -44,7 +44,10 @@ pub fn run() {
                     let state = cleanup_handle.state::<app_state::AppState>();
                     let cfg = match config::load(&state.config_path) {
                         Ok(c) => c,
-                        Err(_) => continue,
+                        Err(e) => {
+                            eprintln!("cleanup loop: failed to load config: {e}");
+                            continue;
+                        }
                     };
                     if !cfg.auto_cleanup {
                         continue;
