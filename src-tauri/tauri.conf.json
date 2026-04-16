@@ -24,7 +24,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["dmg", "msi"],
+    "targets": ["dmg", "msi", "nsis"],
     "publisher": "Clipship",
     "category": "DeveloperTool",
     "shortDescription": "Clipboard-to-SSH uploader",
