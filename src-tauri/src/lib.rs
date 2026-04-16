@@ -18,6 +18,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
+            // macOS: run as a menu-bar accessory (no Dock icon).
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
             let handle = app.handle().clone();
             let state = app_state::AppState::build(handle.clone())?;
             app.manage(state);

@@ -45,7 +45,15 @@ pub fn render(m: &Message) -> (&'static str, String) {
             ("Clipship", "Clipboard contains a directory, which is not supported.".into())
         }
         Message::ConfigInvalid(d) => ("Clipship", format!("Configuration is invalid: {d}")),
-        Message::SshBinariesMissing => ("Clipship", "ssh or scp is missing on this machine.".into()),
+        Message::SshBinariesMissing => {
+            #[cfg(target_os = "windows")]
+            let hint = "Enable OpenSSH Client under Settings \u{2192} Apps \u{2192} Optional features.";
+            #[cfg(target_os = "macos")]
+            let hint = "Run `xcode-select --install` to install command-line tools.";
+            #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+            let hint = "Install openssh-client via your package manager.";
+            ("Clipship", format!("ssh or scp is missing. {hint}"))
+        }
         Message::MkdirFailed(e) => ("Clipship", format!("Remote directory creation failed: {e}")),
         Message::UploadFailed { stderr, part_path } => (
             "Clipship",
