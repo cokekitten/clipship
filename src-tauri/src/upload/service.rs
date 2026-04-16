@@ -192,6 +192,7 @@ mod happy_path_tests {
             private_key_path: key_path.into(),
             remote_dir: "/uploads".into(),
             shortcut: "CmdOrCtrl+Shift+U".into(),
+            shortcut_double_tap: false,
         }
     }
 

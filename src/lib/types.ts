@@ -6,6 +6,7 @@ export interface Config {
   private_key_path: string;
   remote_dir: string;
   shortcut: string;
+  shortcut_double_tap: boolean;
 }
 
 export interface Status {

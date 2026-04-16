@@ -14,6 +14,8 @@ pub struct Config {
     pub private_key_path: String,
     pub remote_dir: String,
     pub shortcut: String,
+    #[serde(default)]
+    pub shortcut_double_tap: bool,
 }
 
 impl Default for Config {
@@ -26,6 +28,7 @@ impl Default for Config {
             private_key_path: String::new(),
             remote_dir: String::new(),
             shortcut: "CmdOrCtrl+Shift+U".into(),
+            shortcut_double_tap: false,
         }
     }
 }
@@ -167,6 +170,31 @@ mod tests {
 
         assert!(path.exists());
         assert_eq!(std::fs::read_to_string(&path).unwrap(), serde_json::to_string_pretty(&cfg).unwrap());
+    }
+
+    #[test]
+    fn deserializes_without_shortcut_double_tap_field() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("c.json");
+        std::fs::write(
+            &path,
+            r#"{"version":1,"host":"h","port":22,"username":"u","private_key_path":"","remote_dir":"/r","shortcut":"CmdOrCtrl+Shift+U"}"#,
+        )
+        .unwrap();
+        let cfg = load(&path).unwrap();
+        assert_eq!(cfg.shortcut_double_tap, false);
+    }
+
+    #[test]
+    fn round_trip_preserves_shortcut_double_tap() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("c.json");
+        let mut cfg = Config::default();
+        cfg.host = "h".into();
+        cfg.shortcut_double_tap = true;
+        save(&path, &cfg).unwrap();
+        let back = load(&path).unwrap();
+        assert!(back.shortcut_double_tap);
     }
 }
 

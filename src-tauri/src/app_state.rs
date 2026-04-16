@@ -10,6 +10,7 @@ pub struct AppState {
     pub upload: UploadService,
     pub config_path: PathBuf,
     pub temp_dir: PathBuf,
+    pub last_shortcut_press: Mutex<Option<std::time::Instant>>,
 }
 
 impl AppState {
@@ -40,6 +41,6 @@ impl AppState {
             after_snapshot_hook: None,
         };
 
-        Ok(AppState { upload, config_path, temp_dir })
+        Ok(AppState { upload, config_path, temp_dir, last_shortcut_press: Mutex::new(None) })
     }
 }

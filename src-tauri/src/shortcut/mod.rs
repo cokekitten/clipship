@@ -1,9 +1,15 @@
 use crate::app_state::AppState;
 use crate::commands::ensure_ssh_scp;
 use crate::notify::Message;
+use crate::shortcut::detect::should_fire;
 use crate::tray;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, Runtime};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+
+pub mod detect;
+
+const DOUBLE_TAP_WINDOW_MS: u64 = 400;
 
 /// Register the accelerator.  Returns Err(String) on failure (already notified).
 pub fn register<R: Runtime>(app: &AppHandle<R>, accelerator: &str) -> Result<(), String> {
@@ -21,8 +27,34 @@ pub fn register<R: Runtime>(app: &AppHandle<R>, accelerator: &str) -> Result<(),
         if event.state() != ShortcutState::Pressed {
             return;
         }
-        let app = app_for_handler.clone();
-        tauri::async_runtime::spawn(run_shortcut_upload(app));
+        let state = app_for_handler.state::<AppState>();
+        let cfg = match crate::config::load(&state.config_path) {
+            Ok(c) => c,
+            Err(_) => {
+                // If config is unreadable, fall back to immediate fire; the
+                // upload path itself will surface a ConfigInvalid notification.
+                tauri::async_runtime::spawn(run_shortcut_upload(app_for_handler.clone()));
+                return;
+            }
+        };
+
+        if !cfg.shortcut_double_tap {
+            tauri::async_runtime::spawn(run_shortcut_upload(app_for_handler.clone()));
+            return;
+        }
+
+        let mut guard = state.last_shortcut_press.lock().unwrap();
+        let (fire, next) = should_fire(
+            *guard,
+            Instant::now(),
+            Duration::from_millis(DOUBLE_TAP_WINDOW_MS),
+        );
+        *guard = next;
+        drop(guard);
+
+        if fire {
+            tauri::async_runtime::spawn(run_shortcut_upload(app_for_handler.clone()));
+        }
     }) {
         Ok(()) => Ok(()),
         Err(e) => {
