@@ -38,8 +38,6 @@ src-tauri/target/
 src-tauri/gen/
 
 # Tauri bundles and generated artifacts
-src-tauri/icons/icon.icns
-src-tauri/icons/icon.ico
 
 # Temporary files
 tmp/
