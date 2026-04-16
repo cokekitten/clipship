@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
 use crate::config::{self, Config};
+use crate::config::validate;
 use crate::config::validate::FieldWarning;
 use crate::notify::Message;
 use crate::test_connection;
@@ -58,7 +59,7 @@ pub async fn load_config(
 #[tauri::command]
 pub async fn save_config<R: Runtime>(
     app: AppHandle<R>,
-    mut cfg: Config,
+    cfg: Config,
     state: State<'_, AppState>,
 ) -> Result<SaveConfigResponse, String> {
     if let Err(e) = cfg.validate() {
@@ -66,25 +67,66 @@ pub async fn save_config<R: Runtime>(
         return Err(e.to_string());
     }
 
-    // For SSH mode: detect the remote OS via `uname -s` and populate remote_dir.
-    // This replaces manual Destination configuration — the path is cached in config.
-    if cfg.mode == crate::config::UploadMode::Ssh {
-        ensure_ssh_scp(&state).await?;
-        let argv = crate::ssh::commands::detect_remote_info(
-            cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host,
-        );
-        let out = state.upload.runner.run(argv).await.map_err(|e| e.to_string())?;
-        if !out.success {
-            let err = format!("SSH connection test failed: {}", out.stderr);
-            state.upload.notifier.notify(Message::ConfigInvalid(err.clone()));
-            return Err(err);
-        }
-        cfg.remote_dir = remote_dir_from_detection(&out.stdout);
-    }
-
     let warnings = cfg.warnings().into_iter().map(warning_text).collect::<Vec<_>>();
     config::save(&state.config_path, &cfg).map_err(|e| e.to_string())?;
     crate::shortcut::register(&app, &cfg.shortcut)?;
+    Ok(SaveConfigResponse { warnings })
+}
+
+/// Save general (non-SSH) config fields while preserving existing SSH fields.
+#[tauri::command]
+pub async fn save_general_config<R: Runtime>(
+    app: AppHandle<R>,
+    cfg: Config,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let mut existing = config::load(&state.config_path).unwrap_or_default();
+    existing.mode = cfg.mode;
+    existing.shortcut = cfg.shortcut;
+    existing.shortcut_double_tap = cfg.shortcut_double_tap;
+    existing.auto_cleanup = cfg.auto_cleanup;
+
+    validate::shortcut(&existing.shortcut).map_err(|e| e.to_string())?;
+    config::save(&state.config_path, &existing).map_err(|e| e.to_string())?;
+    crate::shortcut::register(&app, &existing.shortcut)?;
+    Ok(())
+}
+
+/// Save SSH-specific config fields while preserving existing general fields.
+/// Runs the connection test and auto-detects the remote tmp directory.
+#[tauri::command]
+pub async fn save_ssh_config<R: Runtime>(
+    app: AppHandle<R>,
+    cfg: Config,
+    state: State<'_, AppState>,
+) -> Result<SaveConfigResponse, String> {
+    let mut existing = config::load(&state.config_path).unwrap_or_default();
+    existing.mode = crate::config::UploadMode::Ssh;
+    existing.host = cfg.host;
+    existing.port = cfg.port;
+    existing.username = cfg.username;
+    existing.private_key_path = cfg.private_key_path;
+
+    if let Err(e) = existing.validate() {
+        state.upload.notifier.notify(Message::ConfigInvalid(e.to_string()));
+        return Err(e.to_string());
+    }
+
+    ensure_ssh_scp(&state).await?;
+    let argv = crate::ssh::commands::detect_remote_info(
+        existing.port, &existing.private_key_path, &existing.username, &existing.host,
+    );
+    let out = state.upload.runner.run(argv).await.map_err(|e| e.to_string())?;
+    if !out.success {
+        let err = "SSH auto-configuration only supports macOS / Linux remotes; for Windows please configure the destination directory manually.".to_string();
+        state.upload.notifier.notify(Message::ConfigInvalid(err.clone()));
+        return Err(err);
+    }
+    existing.remote_dir = remote_dir_from_detection(&out.stdout);
+
+    let warnings = existing.warnings().into_iter().map(warning_text).collect::<Vec<_>>();
+    config::save(&state.config_path, &existing).map_err(|e| e.to_string())?;
+    crate::shortcut::register(&app, &existing.shortcut)?;
     Ok(SaveConfigResponse { warnings })
 }
 

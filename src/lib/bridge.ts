@@ -4,6 +4,8 @@ import type { Config, SaveConfigResponse } from "./types";
 export const loadConfig = () => invoke<Config>("load_config");
 export const defaultPrivateKey = () => invoke<string | null>("default_private_key");
 export const saveConfig = (cfg: Config) => invoke<SaveConfigResponse>("save_config", { cfg });
+export const saveGeneralConfig = (cfg: Config) => invoke<void>("save_general_config", { cfg });
+export const saveSshConfig = (cfg: Config) => invoke<SaveConfigResponse>("save_ssh_config", { cfg });
 export const triggerUploadNow = () => invoke<string>("trigger_upload_now");
 export const copyLastUploaded = () => invoke<string | null>("copy_last_uploaded");
 export const getAutostart = () => invoke<boolean>("get_autostart");
