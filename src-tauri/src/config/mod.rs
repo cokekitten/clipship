@@ -67,6 +67,53 @@ pub fn config_file(app_config_dir: &Path) -> PathBuf {
     app_config_dir.join("clipship").join("config.json")
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[error("{field}: {err}")]
+pub struct ValidationError {
+    pub field: &'static str,
+    pub err: validate::FieldError,
+}
+
+impl Config {
+    pub fn validate(&self) -> Result<(), ValidationError> {
+        validate::host(&self.host).map_err(|e| ValidationError {
+            field: "host",
+            err: e,
+        })?;
+        validate::port(self.port as u32).map_err(|e| ValidationError {
+            field: "port",
+            err: e,
+        })?;
+        validate::username(&self.username).map_err(|e| ValidationError {
+            field: "username",
+            err: e,
+        })?;
+        validate::private_key_path(&self.private_key_path).map_err(|e| ValidationError {
+            field: "private_key_path",
+            err: e,
+        })?;
+        validate::remote_dir(&self.remote_dir).map_err(|e| ValidationError {
+            field: "remote_dir",
+            err: e,
+        })?;
+        validate::shortcut(&self.shortcut).map_err(|e| ValidationError {
+            field: "shortcut",
+            err: e,
+        })?;
+        Ok(())
+    }
+
+    /// Non-fatal warnings to show alongside a successful save. v1 only emits a loose-
+    /// private-key-permissions warning on Unix hosts per spec's macOS note.
+    pub fn warnings(&self) -> Vec<validate::FieldWarning> {
+        let mut out = vec![];
+        if let Some(w) = validate::private_key_permissions(&self.private_key_path) {
+            out.push(w);
+        }
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,5 +167,31 @@ mod tests {
 
         assert!(path.exists());
         assert_eq!(std::fs::read_to_string(&path).unwrap(), serde_json::to_string_pretty(&cfg).unwrap());
+    }
+}
+
+#[cfg(test)]
+mod validate_aggregate_tests {
+    use super::*;
+
+    #[test]
+    fn default_config_fails_validation_on_empty_fields() {
+        let cfg = Config::default();
+        let err = cfg.validate().unwrap_err();
+        assert_eq!(err.field, "host");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn warnings_surface_loose_key_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let f = tempfile::NamedTempFile::new().unwrap();
+        std::fs::set_permissions(f.path(), std::fs::Permissions::from_mode(0o644)).unwrap();
+        let mut cfg = Config::default();
+        cfg.host = "example.com".into();
+        cfg.username = "alice".into();
+        cfg.remote_dir = "/uploads".into();
+        cfg.private_key_path = f.path().to_string_lossy().into();
+        assert!(!cfg.warnings().is_empty());
     }
 }
