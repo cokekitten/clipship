@@ -186,6 +186,7 @@ mod happy_path_tests {
     fn valid_cfg(key_path: &str) -> Config {
         Config {
             version: 1,
+            mode: crate::config::UploadMode::Ssh,
             host: "example.com".into(),
             port: 22,
             username: "alice".into(),
@@ -193,6 +194,7 @@ mod happy_path_tests {
             remote_dir: "/uploads".into(),
             shortcut: "CmdOrCtrl+Shift+U".into(),
             shortcut_double_tap: false,
+            auto_cleanup: false,
         }
     }
 

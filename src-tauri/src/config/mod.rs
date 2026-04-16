@@ -5,9 +5,19 @@ pub mod validate;
 
 const CURRENT_VERSION: u32 = 1;
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum UploadMode {
+    #[default]
+    Ssh,
+    Local,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Config {
     pub version: u32,
+    #[serde(default)]
+    pub mode: UploadMode,
     pub host: String,
     pub port: u16,
     pub username: String,
@@ -16,12 +26,15 @@ pub struct Config {
     pub shortcut: String,
     #[serde(default)]
     pub shortcut_double_tap: bool,
+    #[serde(default)]
+    pub auto_cleanup: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             version: CURRENT_VERSION,
+            mode: UploadMode::Ssh,
             host: String::new(),
             port: 22,
             username: String::new(),
@@ -29,6 +42,7 @@ impl Default for Config {
             remote_dir: String::new(),
             shortcut: "CmdOrCtrl+Shift+U".into(),
             shortcut_double_tap: false,
+            auto_cleanup: false,
         }
     }
 }
@@ -79,30 +93,14 @@ pub struct ValidationError {
 
 impl Config {
     pub fn validate(&self) -> Result<(), ValidationError> {
-        validate::host(&self.host).map_err(|e| ValidationError {
-            field: "host",
-            err: e,
-        })?;
-        validate::port(self.port as u32).map_err(|e| ValidationError {
-            field: "port",
-            err: e,
-        })?;
-        validate::username(&self.username).map_err(|e| ValidationError {
-            field: "username",
-            err: e,
-        })?;
-        validate::private_key_path(&self.private_key_path).map_err(|e| ValidationError {
-            field: "private_key_path",
-            err: e,
-        })?;
-        validate::remote_dir(&self.remote_dir).map_err(|e| ValidationError {
-            field: "remote_dir",
-            err: e,
-        })?;
-        validate::shortcut(&self.shortcut).map_err(|e| ValidationError {
-            field: "shortcut",
-            err: e,
-        })?;
+        if self.mode == UploadMode::Ssh {
+            validate::host(&self.host).map_err(|e| ValidationError { field: "host", err: e })?;
+            validate::port(self.port as u32).map_err(|e| ValidationError { field: "port", err: e })?;
+            validate::username(&self.username).map_err(|e| ValidationError { field: "username", err: e })?;
+            validate::private_key_path(&self.private_key_path).map_err(|e| ValidationError { field: "private_key_path", err: e })?;
+            validate::remote_dir(&self.remote_dir).map_err(|e| ValidationError { field: "remote_dir", err: e })?;
+        }
+        validate::shortcut(&self.shortcut).map_err(|e| ValidationError { field: "shortcut", err: e })?;
         Ok(())
     }
 
@@ -121,6 +119,59 @@ impl Config {
 mod tests {
     use super::*;
     use tempfile::tempdir;
+
+    #[test]
+    fn mode_defaults_to_ssh_when_field_absent() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("c.json");
+        std::fs::write(
+            &path,
+            r#"{"version":1,"host":"h","port":22,"username":"u","private_key_path":"","remote_dir":"/r","shortcut":"CmdOrCtrl+Shift+U"}"#,
+        ).unwrap();
+        let cfg = load(&path).unwrap();
+        assert_eq!(cfg.mode, UploadMode::Ssh);
+    }
+
+    #[test]
+    fn auto_cleanup_defaults_to_false_when_field_absent() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("c.json");
+        std::fs::write(
+            &path,
+            r#"{"version":1,"host":"h","port":22,"username":"u","private_key_path":"","remote_dir":"/r","shortcut":"CmdOrCtrl+Shift+U"}"#,
+        ).unwrap();
+        let cfg = load(&path).unwrap();
+        assert!(!cfg.auto_cleanup);
+    }
+
+    #[test]
+    fn local_mode_validate_skips_ssh_fields() {
+        let mut cfg = Config::default();
+        cfg.mode = UploadMode::Local;
+        // host/username/etc. are all empty — should not fail in local mode
+        assert!(cfg.validate().is_ok());
+    }
+
+    #[test]
+    fn ssh_mode_validate_still_requires_host() {
+        let cfg = Config::default(); // mode == Ssh, host == ""
+        let err = cfg.validate().unwrap_err();
+        assert_eq!(err.field, "host");
+    }
+
+    #[test]
+    fn mode_and_auto_cleanup_round_trip() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("c.json");
+        let mut cfg = Config::default();
+        cfg.host = "h".into();
+        cfg.mode = UploadMode::Local;
+        cfg.auto_cleanup = true;
+        save(&path, &cfg).unwrap();
+        let back = load(&path).unwrap();
+        assert_eq!(back.mode, UploadMode::Local);
+        assert!(back.auto_cleanup);
+    }
 
     #[test]
     fn save_then_load_roundtrips() {
