@@ -492,6 +492,7 @@ name = "clipship"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "chrono",
  "clipboard-rs",
  "rand 0.8.5",
