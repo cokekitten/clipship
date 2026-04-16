@@ -13,6 +13,7 @@
 
   let cfg: Config = $state({
     version: 1,
+    mode: "ssh",
     host: "",
     port: 22,
     username: "",
@@ -20,6 +21,7 @@
     remote_dir: "",
     shortcut: "CmdOrCtrl+Shift+U",
     shortcut_double_tap: false,
+    auto_cleanup: false,
   });
 
   let status: Status = $state({ kind: "idle", message: "" });
