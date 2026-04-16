@@ -26,6 +26,8 @@ impl AppState {
             .map_err(|e| anyhow::anyhow!("no app_local_data_dir: {e}"))?
             .join("clipship-tmp");
 
+        let local_output_dir = std::env::temp_dir().join("clipship");
+
         let runner: Arc<dyn CommandRunner> = Arc::new(TokioRunner);
         let clipboard: Arc<dyn ClipboardAdapter> = Arc::new(RealClipboard);
         let notifier: Arc<dyn Notifier> = Arc::new(RealNotifier { app: app.clone() });
@@ -36,6 +38,7 @@ impl AppState {
             notifier,
             guard: InFlightGuard::default(),
             temp_dir: temp_dir.clone(),
+            local_output_dir,
             last_uploaded: Arc::new(Mutex::new(None)),
             #[cfg(test)]
             after_snapshot_hook: None,

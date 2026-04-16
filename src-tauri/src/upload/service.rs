@@ -1,4 +1,4 @@
-use crate::clipboard::adapter::ClipboardAdapter;
+use crate::clipboard::adapter::{ClipboardAdapter, ClipboardContent};
 use crate::clipboard::classify::{classify, Classified};
 use crate::clipboard::image::TempImage;
 use crate::clipboard::snapshot::Snapshot;
@@ -17,6 +17,7 @@ pub struct UploadService {
     pub notifier: Arc<dyn Notifier>,
     pub guard: InFlightGuard,
     pub temp_dir: PathBuf,
+    pub local_output_dir: PathBuf,
     pub last_uploaded: std::sync::Arc<std::sync::Mutex<Option<String>>>,
     #[cfg(test)]
     pub after_snapshot_hook: Option<std::sync::Arc<dyn Fn() + Send + Sync>>,
@@ -29,11 +30,7 @@ pub struct UploadSuccess {
 }
 
 impl UploadService {
-    /// Public entry: run the upload, and ALWAYS emit exactly one user-facing notification
-    /// (one success variant or one failure variant) before returning.  Callers get the
-    /// Result for programmatic handling (e.g. the settings UI may show extra detail), but
-    /// notification responsibility lives here so that every caller — shortcut handler,
-    /// tray menu, invoke handler — gets consistent user-visible behavior.
+    /// Public entry: run the upload, and ALWAYS emit exactly one user-facing notification.
     pub async fn upload(&self, cfg: &Config) -> Result<UploadSuccess, UploadError> {
         let result = self.upload_inner(cfg).await;
         match &result {
@@ -63,6 +60,14 @@ impl UploadService {
             .ok_or(UploadError::InProgress)?;
 
         let content = self.clipboard.read();
+
+        match cfg.mode {
+            crate::config::UploadMode::Ssh => self.upload_via_ssh(cfg, content).await,
+            crate::config::UploadMode::Local => self.upload_via_local(content).await,
+        }
+    }
+
+    async fn upload_via_ssh(&self, cfg: &Config, content: ClipboardContent) -> Result<UploadSuccess, UploadError> {
         let (local_path, original_name, temp): (PathBuf, String, Option<TempImage>) =
             match classify(content.clone()) {
                 Classified::FileToUpload(p) => {
@@ -103,7 +108,7 @@ impl UploadService {
         let rm_argv = commands::rm_part(
             cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, &remote_part,
         );
-        let _ = self.runner.run(rm_argv).await?; // rm -f must not fail the upload
+        let _ = self.runner.run(rm_argv).await?;
 
         let local_path_text = local_path.to_str().ok_or_else(|| {
             UploadError::LocalPathInvalid(local_path.to_string_lossy().to_string())
@@ -151,6 +156,45 @@ impl UploadService {
             remote_path: remote_final,
             clipboard_updated,
         })
+    }
+
+    async fn upload_via_local(&self, content: ClipboardContent) -> Result<UploadSuccess, UploadError> {
+        let (src_path, original_name, bytes): (Option<PathBuf>, String, Option<Vec<u8>>) =
+            match classify(content) {
+                Classified::FileToUpload(p) => {
+                    let name = p
+                        .file_name()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("file")
+                        .to_string();
+                    (Some(p), name, None)
+                }
+                Classified::ImageBytes(b) => (None, "clipboard.png".into(), Some(b)),
+                Classified::DirectoryUnsupported => return Err(UploadError::ClipboardDirectory),
+                Classified::Nothing => return Err(UploadError::ClipboardEmpty),
+            };
+
+        let dest_name = filename::build_remote_filename(&original_name);
+        std::fs::create_dir_all(&self.local_output_dir)?;
+        let dest = self.local_output_dir.join(&dest_name);
+
+        if let Some(src) = src_path {
+            std::fs::copy(&src, &dest)?;
+        } else if let Some(b) = bytes {
+            std::fs::write(&dest, &b)?;
+        }
+
+        let dest_str = dest
+            .to_str()
+            .ok_or_else(|| UploadError::LocalPathInvalid(dest.to_string_lossy().into()))?
+            .to_string();
+
+        self.clipboard
+            .write_text(&dest_str)
+            .map_err(|_| UploadError::ClipboardWrite)?;
+        *self.last_uploaded.lock().unwrap() = Some(dest_str.clone());
+
+        Ok(UploadSuccess { remote_path: dest_str, clipboard_updated: true })
     }
 }
 
@@ -219,6 +263,7 @@ mod happy_path_tests {
             notifier: Arc::new(notifier.clone()),
             guard: InFlightGuard::default(),
             temp_dir: tempfile::tempdir().unwrap().into_path(),
+            local_output_dir: tempfile::tempdir().unwrap().into_path(),
             last_uploaded: Arc::new(std::sync::Mutex::new(None)),
             after_snapshot_hook: None,
         };
@@ -266,6 +311,7 @@ mod happy_path_tests {
             notifier: std::sync::Arc::new(notifier.clone()),
             guard: InFlightGuard::default(),
             temp_dir: tempfile::tempdir().unwrap().into_path(),
+            local_output_dir: tempfile::tempdir().unwrap().into_path(),
             last_uploaded: std::sync::Arc::new(std::sync::Mutex::new(None)),
             after_snapshot_hook: Some(Arc::new(move || clipboard_clone.set(ClipboardContent::Other))),
         };
@@ -297,6 +343,7 @@ mod happy_path_tests {
             notifier: std::sync::Arc::new(notifier.clone()),
             guard: InFlightGuard::default(),
             temp_dir: tempfile::tempdir().unwrap().into_path(),
+            local_output_dir: tempfile::tempdir().unwrap().into_path(),
             last_uploaded: std::sync::Arc::new(std::sync::Mutex::new(None)),
             after_snapshot_hook: None,
         };
@@ -337,6 +384,7 @@ mod happy_path_tests {
             notifier: std::sync::Arc::new(notifier.clone()),
             guard: InFlightGuard::default(),
             temp_dir: tempfile::tempdir().unwrap().into_path(),
+            local_output_dir: tempfile::tempdir().unwrap().into_path(),
             last_uploaded: std::sync::Arc::new(std::sync::Mutex::new(None)),
             after_snapshot_hook: None,
         };
@@ -367,6 +415,7 @@ mod happy_path_tests {
             notifier: std::sync::Arc::new(notifier.clone()),
             guard: guard.clone(),
             temp_dir: tempfile::tempdir().unwrap().into_path(),
+            local_output_dir: tempfile::tempdir().unwrap().into_path(),
             last_uploaded: std::sync::Arc::new(std::sync::Mutex::new(None)),
             after_snapshot_hook: None,
         };
@@ -392,6 +441,7 @@ mod happy_path_tests {
             notifier: std::sync::Arc::new(notifier.clone()),
             guard: InFlightGuard::default(),
             temp_dir: tempfile::tempdir().unwrap().into_path(),
+            local_output_dir: tempfile::tempdir().unwrap().into_path(),
             last_uploaded: std::sync::Arc::new(std::sync::Mutex::new(None)),
             after_snapshot_hook: None,
         };
@@ -422,6 +472,7 @@ mod happy_path_tests {
             notifier: std::sync::Arc::new(notifier.clone()),
             guard: InFlightGuard::default(),
             temp_dir: tempfile::tempdir().unwrap().into_path(),
+            local_output_dir: tempfile::tempdir().unwrap().into_path(),
             last_uploaded: std::sync::Arc::new(std::sync::Mutex::new(None)),
             after_snapshot_hook: None,
         };
@@ -432,5 +483,97 @@ mod happy_path_tests {
         let msgs = notifier.msgs();
         assert_eq!(msgs.len(), 1);
         assert!(matches!(msgs[0], Message::IoFailed(_)));
+    }
+}
+
+#[cfg(test)]
+mod local_upload_tests {
+    use super::*;
+    use crate::clipboard::adapter::{fakes::FakeClipboard, ClipboardContent};
+    use crate::notify::fakes::RecordingNotifier;
+    use crate::ssh::runner::fakes::RecordingRunner;
+
+    fn local_svc(clipboard: FakeClipboard, output_dir: std::path::PathBuf) -> UploadService {
+        UploadService {
+            runner: Arc::new(RecordingRunner::with_scripts(vec![])),
+            clipboard: Arc::new(clipboard),
+            notifier: Arc::new(RecordingNotifier::default()),
+            guard: InFlightGuard::default(),
+            temp_dir: tempfile::tempdir().unwrap().into_path(),
+            local_output_dir: output_dir,
+            last_uploaded: Arc::new(std::sync::Mutex::new(None)),
+            #[cfg(test)]
+            after_snapshot_hook: None,
+        }
+    }
+
+    fn local_cfg() -> crate::config::Config {
+        let mut c = crate::config::Config::default();
+        c.mode = crate::config::UploadMode::Local;
+        c
+    }
+
+    #[tokio::test]
+    async fn local_file_upload_copies_file_and_updates_clipboard() {
+        let src = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(src.path(), b"hello").unwrap();
+        let output_dir = tempfile::tempdir().unwrap();
+        let clipboard = FakeClipboard::new(ClipboardContent::Files(vec![src.path().to_path_buf()]));
+        let svc = local_svc(clipboard.clone(), output_dir.path().to_path_buf());
+
+        let result = svc.upload(&local_cfg()).await.unwrap();
+
+        assert!(result.clipboard_updated);
+        assert!(std::path::Path::new(&result.remote_path).exists());
+        let copied = std::fs::read(std::path::Path::new(&result.remote_path)).unwrap();
+        assert_eq!(copied, b"hello");
+        assert_eq!(clipboard.written(), vec![result.remote_path]);
+    }
+
+    #[tokio::test]
+    async fn local_image_upload_writes_png_to_output_dir() {
+        let output_dir = tempfile::tempdir().unwrap();
+        let bytes = vec![0x89u8, 0x50, 0x4E, 0x47]; // partial PNG header
+        let clipboard = FakeClipboard::new(ClipboardContent::Image(bytes.clone()));
+        let svc = local_svc(clipboard.clone(), output_dir.path().to_path_buf());
+
+        let result = svc.upload(&local_cfg()).await.unwrap();
+
+        assert!(result.remote_path.ends_with(".png"));
+        let on_disk = std::fs::read(std::path::Path::new(&result.remote_path)).unwrap();
+        assert_eq!(on_disk, bytes);
+    }
+
+    #[tokio::test]
+    async fn local_empty_clipboard_returns_error() {
+        let output_dir = tempfile::tempdir().unwrap();
+        let clipboard = FakeClipboard::new(ClipboardContent::Empty);
+        let svc = local_svc(clipboard, output_dir.path().to_path_buf());
+
+        let err = svc.upload(&local_cfg()).await.unwrap_err();
+        assert!(matches!(err, UploadError::ClipboardEmpty));
+    }
+
+    #[tokio::test]
+    async fn local_uploads_make_no_ssh_calls() {
+        let src = tempfile::NamedTempFile::new().unwrap();
+        let output_dir = tempfile::tempdir().unwrap();
+        let clipboard = FakeClipboard::new(ClipboardContent::Files(vec![src.path().to_path_buf()]));
+        let runner = crate::ssh::runner::fakes::RecordingRunner::with_scripts(vec![]);
+        let notifier = RecordingNotifier::default();
+        let svc = UploadService {
+            runner: Arc::new(runner.clone()),
+            clipboard: Arc::new(clipboard),
+            notifier: Arc::new(notifier),
+            guard: InFlightGuard::default(),
+            temp_dir: tempfile::tempdir().unwrap().into_path(),
+            local_output_dir: output_dir.path().to_path_buf(),
+            last_uploaded: Arc::new(std::sync::Mutex::new(None)),
+            #[cfg(test)]
+            after_snapshot_hook: None,
+        };
+
+        svc.upload(&local_cfg()).await.unwrap();
+        assert_eq!(runner.calls().len(), 0, "local mode must not invoke any SSH/SCP commands");
     }
 }
