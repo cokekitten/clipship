@@ -109,13 +109,13 @@
       <Card.Title>System</Card.Title>
     </Card.Header>
     <Card.Content class="flex items-center justify-between">
-      <Label for="autostart" class="flex flex-col gap-1">
+      <Label class="flex flex-col gap-1 items-start">
         <span>Launch at login</span>
         <span class="text-xs font-normal text-muted-foreground">
           Start Clipship automatically when you sign in.
         </span>
       </Label>
-      <Switch id="autostart" checked={autostart} onCheckedChange={onAutostartChange} />
+      <Switch checked={autostart} onCheckedChange={onAutostartChange} />
     </Card.Content>
     <Card.Content class="flex items-center justify-between">
       <div class="flex flex-col gap-1">

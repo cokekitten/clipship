@@ -26,14 +26,13 @@
       <ShortcutRecorder value={cfg.shortcut} onChange={onAccel} />
     </div>
     <div class="flex items-center justify-between">
-      <Label for="double-tap" class="flex flex-col gap-1">
+      <Label class="flex flex-col gap-1 items-start">
         <span>Require double-tap to trigger</span>
         <span class="text-xs font-normal text-muted-foreground">
           Press the shortcut twice within 400&nbsp;ms to upload.
         </span>
       </Label>
       <Switch
-        id="double-tap"
         checked={cfg.shortcut_double_tap}
         onCheckedChange={onDoubleTapChange}
       />
