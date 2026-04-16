@@ -1,5 +1,6 @@
 export interface Config {
   version: 1;
+  mode: "ssh" | "local";
   host: string;
   port: number;
   username: string;
@@ -7,6 +8,7 @@ export interface Config {
   remote_dir: string;
   shortcut: string;
   shortcut_double_tap: boolean;
+  auto_cleanup: boolean;
 }
 
 export interface Status {
