@@ -118,7 +118,7 @@
       <Switch checked={autostart} onCheckedChange={onAutostartChange} />
     </Card.Content>
     <Card.Content class="flex items-center justify-between">
-      <div class="flex flex-col gap-1">
+      <div class="flex flex-col gap-1 items-start">
         <span class="text-sm font-medium">Auto-cleanup</span>
         <span class="text-xs text-muted-foreground">
           Delete files older than 7 days every hour. Remote cleanup requires SSH config to be complete.
