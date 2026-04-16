@@ -78,7 +78,7 @@
 
 <main class="mx-auto flex max-w-2xl flex-col gap-4 p-6">
   <div class="flex items-center justify-between">
-    <h1 class="text-xl font-semibold">Clipship</h1>
+    <h1 class="text-xl font-semibold leading-none">Clipship</h1>
     <Button onclick={onSave}>Save</Button>
   </div>
   <div class="flex gap-1 rounded-md border p-1 w-fit" role="group" aria-label="Upload mode">
@@ -100,10 +100,10 @@
     <SshSection bind:cfg />
     <DestinationSection bind:cfg />
   </div>
-  <ShortcutSection bind:cfg />
   {#if cfg.mode === "ssh"}
     <Button variant="secondary" onclick={onTest}>Test connection</Button>
   {/if}
+  <ShortcutSection bind:cfg />
   <Card.Root>
     <Card.Header>
       <Card.Title>System</Card.Title>
