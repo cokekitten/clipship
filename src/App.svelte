@@ -13,7 +13,7 @@
 
   let cfg: Config = $state({
     version: 1,
-    mode: "ssh",
+    mode: "local",
     host: "",
     port: 22,
     username: "",
@@ -83,15 +83,15 @@
   </div>
   <div class="flex gap-1 rounded-md border p-1 w-fit" role="group" aria-label="Upload mode">
     <Button
-      variant={cfg.mode === "ssh" ? "default" : "ghost"}
-      aria-pressed={cfg.mode === "ssh"}
-      onclick={() => cfg.mode = "ssh"}
-      size="sm">SSH</Button>
-    <Button
       variant={cfg.mode === "local" ? "default" : "ghost"}
       aria-pressed={cfg.mode === "local"}
       onclick={() => cfg.mode = "local"}
       size="sm">Local</Button>
+    <Button
+      variant={cfg.mode === "ssh" ? "default" : "ghost"}
+      aria-pressed={cfg.mode === "ssh"}
+      onclick={() => cfg.mode = "ssh"}
+      size="sm">SSH</Button>
   </div>
   <div
     class={`flex flex-col gap-4 ${cfg.mode === "local" ? "pointer-events-none opacity-50" : ""}`}

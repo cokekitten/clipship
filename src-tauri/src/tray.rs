@@ -2,7 +2,7 @@ use crate::app_state::AppState;
 use crate::commands::ensure_ssh_scp;
 use crate::notify::Message;
 use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
-use tauri::tray::TrayIconBuilder;
+use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, Runtime};
 
 /// Holds tray menu item references so set_status / set_last_uploaded_enabled can
@@ -36,6 +36,15 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
         .on_menu_event(|app, event| handle_event(app, event))
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::DoubleClick { .. } = event {
+                let app = tray.app_handle();
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.show();
+                    let _ = w.set_focus();
+                }
+            }
+        })
         .build(app)?;
 
     // Store references so callers can update status text / enable copy_last.

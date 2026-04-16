@@ -8,8 +8,8 @@ const CURRENT_VERSION: u32 = 1;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum UploadMode {
-    #[default]
     Ssh,
+    #[default]
     Local,
 }
 
