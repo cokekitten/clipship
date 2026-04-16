@@ -58,6 +58,12 @@ pub fn probe_remove(port: u16, key: &str, user: &str, host: &str, remote_dir: &s
     v
 }
 
+pub fn detect_os(port: u16, key: &str, user: &str, host: &str) -> Vec<String> {
+    let mut v = ssh_base(port, key, user, host);
+    v.push("uname -s".into());
+    v
+}
+
 pub fn find_and_delete_old(port: u16, key: &str, user: &str, host: &str, remote_dir: &str) -> Vec<String> {
     let mut v = ssh_base(port, key, user, host);
     v.push(format!(

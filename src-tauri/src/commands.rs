@@ -12,6 +12,18 @@ pub struct SaveConfigResponse {
     pub warnings: Vec<String>,
 }
 
+/// Map `uname -s` output to the appropriate remote tmp directory for clipship.
+fn remote_dir_for_uname(uname_s: &str) -> String {
+    let s = uname_s.trim().to_lowercase();
+    // MSYS2/Cygwin on Windows also support /tmp; Windows OpenSSH without a POSIX layer
+    // would fail uname entirely and we'd never reach this function.
+    if s.contains("linux") || s.contains("darwin") || s.contains("mingw") || s.contains("cygwin") || s.contains("msys") {
+        "/tmp/clipship".to_string()
+    } else {
+        "/tmp/clipship".to_string() // safe POSIX fallback for any other Unix variant
+    }
+}
+
 fn warning_text(w: FieldWarning) -> String {
     match w {
         FieldWarning::PrivateKeyLoosePermissions { path, mode } => {
@@ -48,13 +60,30 @@ pub async fn load_config(
 #[tauri::command]
 pub async fn save_config<R: Runtime>(
     app: AppHandle<R>,
-    cfg: Config,
+    mut cfg: Config,
     state: State<'_, AppState>,
 ) -> Result<SaveConfigResponse, String> {
     if let Err(e) = cfg.validate() {
         state.upload.notifier.notify(Message::ConfigInvalid(e.to_string()));
         return Err(e.to_string());
     }
+
+    // For SSH mode: detect the remote OS via `uname -s` and populate remote_dir.
+    // This replaces manual Destination configuration — the path is cached in config.
+    if cfg.mode == crate::config::UploadMode::Ssh {
+        ensure_ssh_scp(&state).await?;
+        let argv = crate::ssh::commands::detect_os(
+            cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host,
+        );
+        let out = state.upload.runner.run(argv).await.map_err(|e| e.to_string())?;
+        if !out.success {
+            let err = format!("SSH connection test failed: {}", out.stderr);
+            state.upload.notifier.notify(Message::ConfigInvalid(err.clone()));
+            return Err(err);
+        }
+        cfg.remote_dir = remote_dir_for_uname(&out.stdout);
+    }
+
     let warnings = cfg.warnings().into_iter().map(warning_text).collect::<Vec<_>>();
     config::save(&state.config_path, &cfg).map_err(|e| e.to_string())?;
     crate::shortcut::register(&app, &cfg.shortcut)?;

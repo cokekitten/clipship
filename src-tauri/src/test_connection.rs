@@ -28,8 +28,10 @@ pub async fn run(
         Alphanumeric.sample_string(&mut rand::thread_rng(), 8).to_lowercase()
     );
 
+    let remote_dir = if cfg.remote_dir.is_empty() { "/tmp/clipship" } else { &cfg.remote_dir };
+
     let mkdir_argv = commands::mkdir(
-        cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, "/tmp/clipship",
+        cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, remote_dir,
     );
     let out = runner.run(mkdir_argv).await?;
     if !out.success {
@@ -37,7 +39,7 @@ pub async fn run(
     }
 
     let touch_argv = commands::probe_touch(
-        cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, "/tmp/clipship", &probe_name,
+        cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, remote_dir, &probe_name,
     );
     let out = runner.run(touch_argv).await?;
     if !out.success {
@@ -45,7 +47,7 @@ pub async fn run(
     }
 
     let rm_argv = commands::probe_remove(
-        cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, "/tmp/clipship", &probe_name,
+        cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, remote_dir, &probe_name,
     );
     let out = runner.run(rm_argv).await?;
     if !out.success {

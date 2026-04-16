@@ -86,8 +86,11 @@ impl UploadService {
                 Classified::Nothing => return Err(UploadError::ClipboardEmpty),
             };
 
+        // remote_dir is auto-detected and stored at save time; fall back for old configs.
+        let remote_dir = if cfg.remote_dir.is_empty() { "/tmp/clipship" } else { &cfg.remote_dir };
+
         let remote_name = filename::build_remote_filename(&original_name);
-        let remote_final = remote_path::join("/tmp/clipship", &remote_name);
+        let remote_final = remote_path::join(remote_dir, &remote_name);
         let remote_part = remote_path::part_path(&remote_final);
 
         let snap = Snapshot::of(&content);
@@ -98,7 +101,7 @@ impl UploadService {
         }
 
         let mkdir_argv = commands::mkdir(
-            cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, "/tmp/clipship",
+            cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host, remote_dir,
         );
         let out = self.runner.run(mkdir_argv).await?;
         if !out.success {
