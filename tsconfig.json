@@ -20,5 +20,5 @@
       "$lib/*": ["src/lib/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "vite.config.js"]
+  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"]
 }
