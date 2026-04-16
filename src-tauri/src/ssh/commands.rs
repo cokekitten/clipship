@@ -58,6 +58,15 @@ pub fn probe_remove(port: u16, key: &str, user: &str, host: &str, remote_dir: &s
     v
 }
 
+pub fn find_and_delete_old(port: u16, key: &str, user: &str, host: &str, remote_dir: &str) -> Vec<String> {
+    let mut v = ssh_base(port, key, user, host);
+    v.push(format!(
+        "find '{}' -maxdepth 1 -mtime +7 -type f -delete",
+        remote_dir
+    ));
+    v
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,5 +121,12 @@ mod tests {
         let r = probe_remove(22, "/k", "u", "h.com", "/r", ".clipship-probe-abc");
         assert!(t.last().unwrap().contains("touch '/r/.clipship-probe-abc'"));
         assert!(r.last().unwrap().contains("rm '/r/.clipship-probe-abc'"));
+    }
+
+    #[test]
+    fn find_and_delete_old_shape() {
+        let v = find_and_delete_old(22, "/k", "u", "h.com", "/r");
+        assert_eq!(v[0], SSH_BIN);
+        assert!(v.last().unwrap().contains("find '/r' -maxdepth 1 -mtime +7 -type f -delete"));
     }
 }

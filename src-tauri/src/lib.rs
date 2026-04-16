@@ -9,7 +9,9 @@ pub mod app_state;
 pub mod tray;
 pub mod commands;
 pub mod shortcut;
+pub mod cleanup;
 
+use std::time::Duration;
 use tauri::Manager;
 
 pub fn run() {
@@ -19,7 +21,6 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .setup(|app| {
-            // macOS: run as a menu-bar accessory (no Dock icon).
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
@@ -27,14 +28,34 @@ pub fn run() {
             let state = app_state::AppState::build(handle.clone())?;
             app.manage(state);
 
-            // Register shortcut from saved config if one exists.
             if let Ok(cfg) = config::load(&app.state::<app_state::AppState>().config_path.clone()) {
                 let _ = shortcut::register(&handle, &cfg.shortcut);
             }
 
             tray::init(&handle)?;
 
-            // Hide settings window on close instead of quitting.
+            // Background auto-cleanup loop: runs every hour, re-reads config each tick.
+            let cleanup_handle = handle.clone();
+            tauri::async_runtime::spawn(async move {
+                let mut interval = tokio::time::interval(Duration::from_secs(3600));
+                interval.tick().await; // discard the immediate first tick
+                loop {
+                    interval.tick().await;
+                    let state = cleanup_handle.state::<app_state::AppState>();
+                    let cfg = match config::load(&state.config_path) {
+                        Ok(c) => c,
+                        Err(_) => continue,
+                    };
+                    if !cfg.auto_cleanup {
+                        continue;
+                    }
+                    let local_dir = std::env::temp_dir().join("clipship");
+                    cleanup::cleanup_local(&local_dir, Duration::from_secs(7 * 24 * 3600));
+                    let runner = state.upload.runner.clone();
+                    cleanup::cleanup_remote(&cfg, runner.as_ref()).await;
+                }
+            });
+
             if let Some(w) = app.get_webview_window("main") {
                 let w_clone = w.clone();
                 w.on_window_event(move |event| {
