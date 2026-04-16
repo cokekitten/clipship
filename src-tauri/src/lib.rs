@@ -50,6 +50,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::load_config,
             commands::save_config,
+            commands::default_private_key,
             commands::test_connection,
             commands::trigger_upload_now,
             commands::copy_last_uploaded,

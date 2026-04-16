@@ -118,6 +118,21 @@ pub async fn copy_last_uploaded(
 }
 
 #[tauri::command]
+pub async fn default_private_key() -> Result<Option<String>, String> {
+    let Some(home) = dirs::home_dir() else {
+        return Ok(None);
+    };
+    let ssh_dir = home.join(".ssh");
+    for name in ["id_ed25519", "id_ecdsa", "id_rsa"] {
+        let p = ssh_dir.join(name);
+        if p.is_file() {
+            return Ok(Some(p.to_string_lossy().into_owned()));
+        }
+    }
+    Ok(None)
+}
+
+#[tauri::command]
 pub async fn get_autostart<R: Runtime>(app: AppHandle<R>) -> Result<bool, String> {
     app.autolaunch().is_enabled().map_err(|e| e.to_string())
 }
