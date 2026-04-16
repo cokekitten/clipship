@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { Config, Status } from "./lib/types";
-  import { loadConfig, saveConfig, testConnection, getAutostart, setAutostart, defaultPrivateKey } from "./lib/bridge";
+  import { loadConfig, saveConfig, getAutostart, setAutostart, defaultPrivateKey } from "./lib/bridge";
   import SshSection from "./components/SshSection.svelte";
   import ShortcutSection from "./components/ShortcutSection.svelte";
   import StatusArea from "./components/StatusArea.svelte";
@@ -25,6 +25,9 @@
 
   let status: Status = $state({ kind: "idle", message: "" });
   let autostart: boolean = $state(false);
+  // Prevents auto-save from firing before the initial config load completes.
+  let ready = $state(false);
+  let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
 
   onMount(async () => {
     try {
@@ -41,26 +44,35 @@
     try {
       autostart = await getAutostart();
     } catch (_) {}
+    ready = true;
   });
 
+  // Auto-save in local mode. SSH mode requires the explicit Save button (which also
+  // tests the connection and detects the remote tmp directory).
+  $effect(() => {
+    const _snap = JSON.stringify(cfg); // track all cfg fields reactively
+    if (!ready || cfg.mode !== "local") return;
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(async () => {
+      try {
+        await saveConfig(cfg);
+      } catch (e) {
+        status = { kind: "error", message: "Auto-save failed", detail: String(e) };
+      }
+    }, 300);
+  });
+
+  // SSH mode: explicit Save = connection test + OS detection + save.
   async function onSave() {
     try {
       const result = await saveConfig(cfg);
       status = result.warnings.length
-        ? { kind: "ok", message: "Saved with warnings.", detail: result.warnings.join("\n") }
-        : { kind: "ok", message: "Saved." };
+        ? { kind: "ok", message: "Connected and saved with warnings.", detail: result.warnings.join("\n") }
+        : { kind: "ok", message: "Connected and saved." };
+      // Reload so cfg.remote_dir reflects the auto-detected path.
+      cfg = await loadConfig();
     } catch (e) {
       status = { kind: "error", message: "Save failed", detail: String(e) };
-    }
-  }
-
-  async function onTest() {
-    status = { kind: "idle", message: "Testing…" };
-    try {
-      await testConnection(cfg);
-      status = { kind: "ok", message: "Connection OK." };
-    } catch (e) {
-      status = { kind: "error", message: "Test failed", detail: String(e) };
     }
   }
 
@@ -78,7 +90,9 @@
 <main class="mx-auto flex max-w-2xl flex-col gap-4 p-6">
   <div class="flex items-center justify-between">
     <h1 class="text-xl font-semibold leading-none">Clipship</h1>
-    <Button onclick={onSave}>Save</Button>
+    {#if cfg.mode === "ssh"}
+      <Button onclick={onSave}>Save</Button>
+    {/if}
   </div>
   <div class="flex gap-1 rounded-md border p-1 w-fit" role="group" aria-label="Upload mode">
     <Button
@@ -98,9 +112,6 @@
   >
     <SshSection bind:cfg />
   </div>
-  {#if cfg.mode === "ssh"}
-    <Button variant="secondary" onclick={onTest}>Test connection</Button>
-  {/if}
   <ShortcutSection bind:cfg />
   <Card.Root>
     <Card.Header>

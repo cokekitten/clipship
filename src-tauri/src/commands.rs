@@ -12,16 +12,14 @@ pub struct SaveConfigResponse {
     pub warnings: Vec<String>,
 }
 
-/// Map `uname -s` output to the appropriate remote tmp directory for clipship.
-fn remote_dir_for_uname(uname_s: &str) -> String {
-    let s = uname_s.trim().to_lowercase();
-    // MSYS2/Cygwin on Windows also support /tmp; Windows OpenSSH without a POSIX layer
-    // would fail uname entirely and we'd never reach this function.
-    if s.contains("linux") || s.contains("darwin") || s.contains("mingw") || s.contains("cygwin") || s.contains("msys") {
-        "/tmp/clipship".to_string()
-    } else {
-        "/tmp/clipship".to_string() // safe POSIX fallback for any other Unix variant
-    }
+/// Parse the two-line output of `detect_remote_info` into a clipship remote directory.
+/// Line 1: uname -s output.  Line 2: user tmp base ($TMPDIR / $XDG_RUNTIME_DIR / $HOME/.cache).
+fn remote_dir_from_detection(output: &str) -> String {
+    let mut lines = output.trim().lines();
+    let _os = lines.next().unwrap_or("").trim();
+    let tmp_base = lines.next().unwrap_or("/tmp").trim().trim_end_matches('/');
+    let base = if tmp_base.is_empty() { "/tmp" } else { tmp_base };
+    format!("{}/clipship", base)
 }
 
 fn warning_text(w: FieldWarning) -> String {
@@ -72,7 +70,7 @@ pub async fn save_config<R: Runtime>(
     // This replaces manual Destination configuration — the path is cached in config.
     if cfg.mode == crate::config::UploadMode::Ssh {
         ensure_ssh_scp(&state).await?;
-        let argv = crate::ssh::commands::detect_os(
+        let argv = crate::ssh::commands::detect_remote_info(
             cfg.port, &cfg.private_key_path, &cfg.username, &cfg.host,
         );
         let out = state.upload.runner.run(argv).await.map_err(|e| e.to_string())?;
@@ -81,7 +79,7 @@ pub async fn save_config<R: Runtime>(
             state.upload.notifier.notify(Message::ConfigInvalid(err.clone()));
             return Err(err);
         }
-        cfg.remote_dir = remote_dir_for_uname(&out.stdout);
+        cfg.remote_dir = remote_dir_from_detection(&out.stdout);
     }
 
     let warnings = cfg.warnings().into_iter().map(warning_text).collect::<Vec<_>>();

@@ -58,9 +58,11 @@ pub fn probe_remove(port: u16, key: &str, user: &str, host: &str, remote_dir: &s
     v
 }
 
-pub fn detect_os(port: u16, key: &str, user: &str, host: &str) -> Vec<String> {
+/// Returns two lines: OS name (uname -s) and the user's private tmp base directory.
+/// macOS: $TMPDIR  Linux: $XDG_RUNTIME_DIR or $HOME/.cache
+pub fn detect_remote_info(port: u16, key: &str, user: &str, host: &str) -> Vec<String> {
     let mut v = ssh_base(port, key, user, host);
-    v.push("uname -s".into());
+    v.push(r#"uname -s && echo "${TMPDIR:-${XDG_RUNTIME_DIR:-$HOME/.cache}}""#.into());
     v
 }
 
