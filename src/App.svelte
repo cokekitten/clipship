@@ -7,6 +7,7 @@
   import SshSection from "./components/SshSection.svelte";
   import ShortcutSection from "./components/ShortcutSection.svelte";
   import StatusArea from "./components/StatusArea.svelte";
+  import UpdateBadge from "./components/UpdateBadge.svelte";
   import * as Card from "$lib/components/ui/card";
   import { Switch } from "$lib/components/ui/switch";
   import { Label } from "$lib/components/ui/label";
@@ -106,6 +107,7 @@
       <h1 class="text-xl font-semibold leading-none">Clipship</h1>
       {#if version}
         <span class="text-xs text-muted-foreground pt-0.5">v{version}</span>
+        <UpdateBadge currentVersion={version} />
       {/if}
     </div>
     <a
