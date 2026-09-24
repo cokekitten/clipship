@@ -242,6 +242,7 @@ mod happy_path_tests {
             shortcut: "CmdOrCtrl+Shift+U".into(),
             shortcut_double_tap: false,
             auto_cleanup: false,
+            auto_paste: false,
         }
     }
 

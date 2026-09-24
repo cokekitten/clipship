@@ -28,6 +28,8 @@ pub struct Config {
     pub shortcut_double_tap: bool,
     #[serde(default)]
     pub auto_cleanup: bool,
+    #[serde(default)]
+    pub auto_paste: bool,
 }
 
 impl Default for Config {
@@ -43,6 +45,7 @@ impl Default for Config {
             shortcut: "CmdOrCtrl+Shift+U".into(),
             shortcut_double_tap: false,
             auto_cleanup: false,
+            auto_paste: false,
         }
     }
 }
@@ -163,6 +166,30 @@ mod tests {
         cfg.mode = UploadMode::Ssh; // explicitly set SSH so host is validated
         let err = cfg.validate().unwrap_err();
         assert_eq!(err.field, "host");
+    }
+
+    #[test]
+    fn auto_paste_defaults_to_false_when_field_absent() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("c.json");
+        std::fs::write(
+            &path,
+            r#"{"version":1,"host":"h","port":22,"username":"u","private_key_path":"","remote_dir":"/r","shortcut":"CmdOrCtrl+Shift+U"}"#,
+        ).unwrap();
+        let cfg = load(&path).unwrap();
+        assert!(!cfg.auto_paste);
+    }
+
+    #[test]
+    fn round_trip_preserves_auto_paste() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("c.json");
+        let mut cfg = Config::default();
+        cfg.host = "h".into();
+        cfg.auto_paste = true;
+        save(&path, &cfg).unwrap();
+        let back = load(&path).unwrap();
+        assert!(back.auto_paste);
     }
 
     #[test]

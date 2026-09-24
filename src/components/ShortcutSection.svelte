@@ -14,6 +14,10 @@
   function onDoubleTapChange(v: boolean) {
     cfg.shortcut_double_tap = v;
   }
+
+  function onAutoPasteChange(v: boolean) {
+    cfg.auto_paste = v;
+  }
 </script>
 
 <Card.Root>
@@ -35,6 +39,19 @@
       <Switch
         checked={cfg.shortcut_double_tap}
         onCheckedChange={onDoubleTapChange}
+      />
+    </div>
+    <div class="flex items-center justify-between">
+      <Label class="flex flex-col gap-1 items-start">
+        <span>Paste path after upload</span>
+        <span class="text-xs font-normal text-muted-foreground">
+          After the shortcut uploads, paste the path into the frontmost app automatically.
+          Only applies to the global shortcut. macOS requires the Accessibility permission.
+        </span>
+      </Label>
+      <Switch
+        checked={cfg.auto_paste}
+        onCheckedChange={onAutoPasteChange}
       />
     </div>
   </Card.Content>

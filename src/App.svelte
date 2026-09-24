@@ -24,6 +24,7 @@
     shortcut: "CmdOrCtrl+Shift+U",
     shortcut_double_tap: false,
     auto_cleanup: false,
+    auto_paste: false,
   });
 
   let status: Status = $state({ kind: "idle", message: "" });

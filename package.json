@@ -14,6 +14,9 @@
     "test:watch": "vitest"
   },
   "license": "MIT",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
   "dependencies": {
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-autostart": "^2.5.1",

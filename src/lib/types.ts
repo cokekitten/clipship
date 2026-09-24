@@ -9,6 +9,7 @@ export interface Config {
   shortcut: string;
   shortcut_double_tap: boolean;
   auto_cleanup: boolean;
+  auto_paste: boolean;
 }
 
 export interface Status {

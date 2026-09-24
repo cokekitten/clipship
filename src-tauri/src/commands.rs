@@ -85,6 +85,7 @@ pub async fn save_general_config<R: Runtime>(
     existing.shortcut = cfg.shortcut;
     existing.shortcut_double_tap = cfg.shortcut_double_tap;
     existing.auto_cleanup = cfg.auto_cleanup;
+    existing.auto_paste = cfg.auto_paste;
 
     validate::shortcut(&existing.shortcut).map_err(|e| e.to_string())?;
     config::save(&state.config_path, &existing).map_err(|e| e.to_string())?;
