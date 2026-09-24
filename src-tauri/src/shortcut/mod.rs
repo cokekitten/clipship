@@ -81,9 +81,14 @@ async fn run_shortcut_upload<R: Runtime>(app: AppHandle<R>) {
         return;
     }
     tray::set_status(&app, "Uploading\u{2026}");
-    let _ = state.upload.upload(&cfg).await;
+    let result = state.upload.upload(&cfg).await;
     tray::set_status(&app, "Idle");
     if state.upload.last_uploaded.lock().unwrap().is_some() {
         tray::set_last_uploaded_enabled(&app, true);
+    }
+    if crate::paste::should_paste(&cfg, &result) {
+        if crate::paste::paste_after_delay().await.is_err() {
+            state.upload.notifier.notify(Message::PasteFailed);
+        }
     }
 }

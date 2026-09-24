@@ -9,6 +9,7 @@ pub mod app_state;
 pub mod tray;
 pub mod commands;
 pub mod shortcut;
+pub mod paste;
 pub mod cleanup;
 
 use std::time::Duration;

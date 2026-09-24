@@ -307,6 +307,7 @@ mod validate_aggregate_tests {
         let f = tempfile::NamedTempFile::new().unwrap();
         std::fs::set_permissions(f.path(), std::fs::Permissions::from_mode(0o644)).unwrap();
         let mut cfg = Config::default();
+        cfg.mode = UploadMode::Ssh;
         cfg.host = "example.com".into();
         cfg.username = "alice".into();
         cfg.remote_dir = "/uploads".into();

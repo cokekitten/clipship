@@ -11,6 +11,7 @@ pub enum Message {
     FinalPathAlreadyExists(String), // .part kept at this path
     UploadInProgress,
     ClipboardWriteFailed,
+    PasteFailed,
     LocalPathInvalid(String),
     IoFailed(String),
     ShortcutRegistrationFailed(String),
@@ -65,6 +66,16 @@ pub fn render(m: &Message) -> (&'static str, String) {
         ),
         Message::UploadInProgress => ("Clipship", "Upload already in progress.".into()),
         Message::ClipboardWriteFailed => ("Clipship", "Upload succeeded but writing to clipboard failed.".into()),
+        Message::PasteFailed => {
+            #[cfg(target_os = "macos")]
+            let hint = "Grant Clipship the Accessibility permission (System Settings \u{2192} Privacy & Security \u{2192} Accessibility).";
+            #[cfg(not(target_os = "macos"))]
+            let hint = "Your desktop session may block synthetic input.";
+            (
+                "Clipship",
+                format!("Path copied, but auto-paste failed \u{2014} paste it manually. {hint}"),
+            )
+        }
         Message::LocalPathInvalid(p) => (
             "Clipship",
             format!("Local file path is not valid UTF-8 and cannot be passed to scp: {p}"),
