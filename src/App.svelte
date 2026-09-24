@@ -104,6 +104,7 @@
 <main class="mx-auto flex max-w-2xl flex-col gap-4 p-6">
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-2">
+      <img src="/app-icon.svg" alt="" class="size-6 rounded-md" />
       <h1 class="text-xl font-semibold leading-none">Clipship</h1>
       {#if version}
         <span class="text-xs text-muted-foreground pt-0.5">v{version}</span>

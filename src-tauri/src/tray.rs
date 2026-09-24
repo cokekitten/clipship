@@ -32,8 +32,15 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         ],
     )?;
 
+    #[cfg(target_os = "macos")]
+    let icon = tauri::include_image!("./icons/tray-template.png");
+    #[cfg(not(target_os = "macos"))]
+    let icon = app.default_window_icon().unwrap().clone();
+
     let _tray = TrayIconBuilder::with_id("clipship-tray")
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(icon)
+        .icon_as_template(cfg!(target_os = "macos"))
+        .tooltip("Clipship")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| handle_event(app, event))
