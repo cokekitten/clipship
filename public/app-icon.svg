@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Clipship — Fileport</title>
+  <desc>A folded lime file with a terminal prompt cut through it, on a deep pine badge.</desc>
+  <defs>
+    <linearGradient id="tile" x1="176" y1="48" x2="820" y2="976" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#20574B"/>
+      <stop offset="1" stop-color="#082E29"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="5" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E1FFA0"/>
+      <stop offset="1" stop-color="#B2EA70"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="14" y1="3" x2="18" y2="10" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6FFDF"/>
+      <stop offset="1" stop-color="#DEFFAB"/>
+    </linearGradient>
+  </defs>
+  <path fill="#06221E" d="M284 56H740C902 56 976 130 976 292V740C976 902 902 976 740 976H284C122 976 48 902 48 740V292C48 130 122 56 284 56Z"/>
+  <path fill="url(#tile)" d="M284 48H740C902 48 976 122 976 284V732C976 894 902 968 740 968H284C122 968 48 894 48 732V284C48 122 122 48 284 48Z"/>
+  <path fill="#FFF" opacity=".12" d="M284 48H740C902 48 976 122 976 284V294C976 132 902 58 740 58H284C122 58 48 132 48 294V284C48 122 122 48 284 48Z"/>
+  <g transform="translate(176 168) scale(28)">
+    <path fill="#041E1B" opacity=".38" transform="translate(0 .5)" d="M6 2H13.5L21 9.5V19C21 20.657 19.657 22 18 22H6C4.343 22 3 20.657 3 19V5C3 3.343 4.343 2 6 2Z"/>
+    <path fill="url(#paper)" fill-rule="evenodd" d="M6 2H13.5L21 9.5V19C21 20.657 19.657 22 18 22H6C4.343 22 3 20.657 3 19V5C3 3.343 4.343 2 6 2ZM7.1 9 12.6 13.25 7.1 17.5 5.55 15.5 8.6 13.25 5.55 11ZM13.1 15.2H18.4V17.7H13.1Z"/>
+    <path fill="#588C42" opacity=".18" d="M13.5 2V7C13.5 8.933 15.067 10.5 17 10.5H21V9.5Z"/>
+    <path fill="url(#fold)" d="M13.5 2V6.5C13.5 8.157 14.843 9.5 16.5 9.5H21Z"/>
+  </g>
+</svg>
