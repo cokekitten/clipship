@@ -47,6 +47,7 @@ LLM: "I see the issue..."
 ## Features
 
 - **One-hotkey upload** — screenshots, copied images, or files.
+- **Auto-paste (optional)** — after the shortcut uploads, paste the path into the frontmost app automatically. macOS requires the Accessibility permission (System Settings → Privacy & Security → Accessibility).
 - **Local mode** — writes to a local temp directory, perfect for local CLI workflows.
 - **SSH mode** — connects to a remote host, auto-detects the OS (macOS / Linux), and uploads to the remote temp directory over SCP.
 - **Auto-cleanup** — optionally deletes files older than 7 days every hour.
@@ -57,7 +58,7 @@ LLM: "I see the issue..."
 
 ## Installation
 
-> Pre-built binaries will be available on the [Releases](https://github.com/cokekitten/clipship/releases) page soon.
+> Pre-built binaries (macOS dmg, Linux deb/AppImage, Windows msi/nsis) are available on the [Releases](https://github.com/cokekitten/clipship/releases) page.
 
 ### Build from Source
 
@@ -90,6 +91,8 @@ pnpm tauri build
 4. Set your preferred global shortcut (default is `CmdOrCtrl+Shift+U`).
 5. Close the settings window — Clipship keeps running in the background.
 6. Whenever you copy an image or file, press the shortcut and paste the path into your CLI.
+
+> **Tip:** enable *Paste path after upload* in settings to have the path pasted straight into your CLI. On macOS, grant Clipship the Accessibility permission the first time.
 
 ---
 
